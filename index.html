@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SPARK</title>
+<meta name="description" content="SPARK: phage x antibiotic interaction analysis from growth curves. Runs entirely in your browser; no data is uploaded.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%23f3f2ee' stroke='%23111' stroke-width='2'/%3E%3Cpath d='M17 5 10 18h6l-1 9 7-13h-6z' fill='%23e8453c'/%3E%3C/svg%3E">
+<style>
+  :root {
+    --bg: #ffffff;
+    --sidebar: #f3f3f0;
+    --panel: #f6f6f3;
+    --line: #dddcd6;
+    --line-strong: #c3c2b7;
+    --ink: #111111;
+    --ink-2: #4a4945;
+    --ink-3: #6b6a64;
+    --primary: #e8453c;
+    --primary-hover: #cf3a32;
+    --syn: #1c5cab;
+    --ant: #c23a3a;
+    --warn-bg: #fff8e6;
+    --warn-line: #f0d48a;
+    --info-bg: #eef4fc;
+    --info-line: #b9d1f0;
+    --err-bg: #fdeeee;
+    --err-line: #f0b5b5;
+    --radius: 8px;
+    --font: "Segoe UI", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font); font-size: 15px; line-height: 1.5; }
+  body { display: flex; min-height: 100vh; }
+  button, input, select { font: inherit; color: inherit; }
+
+  /* ---------- sidebar */
+  aside {
+    width: 300px; flex: 0 0 300px; background: var(--sidebar); border-right: 1px solid var(--line);
+    padding: 28px 22px 40px; position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  }
+  aside h2 { font-size: 1.15rem; margin: 26px 0 10px; font-weight: 650; }
+  aside h2:first-child { margin-top: 0; }
+  .field { margin-bottom: 12px; }
+  .field label, .lbl { display: block; font-size: .875rem; color: var(--ink-2); margin-bottom: 4px; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  input[type=text], input[type=number], select {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff;
+    outline: none; transition: border-color .12s, box-shadow .12s;
+  }
+  input[type=text]:focus, input[type=number]:focus, select:focus { border-color: #8a8980; box-shadow: 0 0 0 3px rgba(17,17,17,.08); }
+  .check { display: flex; gap: 8px; align-items: flex-start; font-size: .9rem; color: var(--ink); margin: 6px 0 10px; }
+  .check input { margin-top: 4px; }
+  .hint { font-size: .8rem; color: var(--ink-3); margin-top: 4px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #fff; }
+  .seg label { padding: 5px 14px; cursor: pointer; font-size: .875rem; margin: 0; color: var(--ink); }
+  .seg input { display: none; }
+  .seg input:checked + span { font-weight: 650; }
+  .seg label:has(input:checked) { background: #111; color: #fff; }
+  .foot { margin-top: 28px; font-size: .8rem; color: var(--ink-3); }
+
+  /* ---------- main */
+  main { flex: 1; min-width: 0; padding: 40px 48px 80px; }
+  .wrap { max-width: 1420px; margin: 0 auto; }
+  h1 { font-size: 2.6rem; margin: 0 0 4px; letter-spacing: -.01em; font-weight: 750; }
+  .lede { color: var(--ink-2); margin: 0 0 28px; max-width: 900px; }
+  h3.step { font-size: 1.5rem; margin: 30px 0 14px; font-weight: 650; }
+  h4 { font-size: 1.05rem; margin: 26px 0 10px; font-weight: 650; }
+  details.box { border: 1px solid var(--line); border-radius: var(--radius); margin: 0 0 16px; background: #fff; }
+  details.box > summary { cursor: pointer; padding: 10px 16px; font-size: .925rem; list-style: none; display: flex; gap: 8px; align-items: center; }
+  details.box > summary::-webkit-details-marker { display: none; }
+  details.box > summary::before { content: "›"; font-size: 1.2rem; line-height: 1; transition: transform .15s; display: inline-block; width: 10px; }
+  details.box[open] > summary::before { transform: rotate(90deg); }
+  details.box > .inner { padding: 4px 18px 14px; border-top: 1px solid var(--line); }
+  details.box ul { margin: 10px 0 0; padding-left: 20px; }
+  details.box li { margin: 4px 0; }
+  code { font-family: var(--mono); font-size: .85em; background: var(--panel); padding: 1px 5px; border-radius: 4px; }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 9px 18px; border-radius: 7px;
+    border: 1px solid var(--line-strong); background: #fff; cursor: pointer; font-size: .925rem; white-space: nowrap;
+    transition: background .12s, border-color .12s;
+  }
+  .btn:hover { border-color: #111; }
+  .btn.primary { background: var(--primary); border-color: var(--primary); color: #fff; font-weight: 600; }
+  .btn.primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+  .btn.block { width: 100%; }
+  .btn:disabled { opacity: .5; cursor: default; }
+  .loadbar { display: grid; grid-template-columns: minmax(200px, 1fr) 2fr; gap: 16px; margin-bottom: 10px; align-items: start; }
+  .drop {
+    border: 1px dashed var(--line-strong); border-radius: var(--radius); background: var(--panel); padding: 10px 14px;
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+  }
+  .drop.over { border-color: #111; background: #ecebe6; }
+  .drop .fname { font-size: .875rem; color: var(--ink-2); flex: 1; min-width: 120px; }
+  .drop select { width: auto; min-width: 140px; }
+  .note { font-size: .875rem; color: var(--ink-2); margin: 4px 0; }
+
+  /* ---------- grid */
+  .gridwrap { border: 1px solid var(--line); border-radius: var(--radius); overflow: auto; max-height: 460px; background: #fff; position: relative; }
+  table.grid { border-collapse: separate; border-spacing: 0; font-size: .875rem; }
+  table.grid th {
+    position: sticky; top: 0; background: #f7f7f5; z-index: 2; font-weight: 500; text-align: left; color: var(--ink-2);
+    padding: 8px 8px; border-bottom: 1px solid var(--line); border-right: 1px solid #eceae4; white-space: nowrap;
+  }
+  table.grid th.k-Control { box-shadow: inset 0 3px 0 #111; }
+  table.grid th.k-Phage { box-shadow: inset 0 3px 0 #2a78d6; }
+  table.grid th.k-Antibiotic { box-shadow: inset 0 3px 0 #eb6834; }
+  table.grid th.k-Combo { box-shadow: inset 0 3px 0 #1baf7a; }
+  table.grid td { border-bottom: 1px solid #eceae4; border-right: 1px solid #eceae4; padding: 0; }
+  table.grid td.rn, table.grid th.rn { position: sticky; left: 0; z-index: 1; background: #f7f7f5; color: var(--ink-3); text-align: right; padding: 0 8px; min-width: 44px; font-variant-numeric: tabular-nums; }
+  table.grid th.rn { z-index: 3; }
+  table.grid td.tcol, table.grid th.tcol { position: sticky; left: 44px; z-index: 1; background: #fff; }
+  table.grid th.tcol { z-index: 3; background: #f7f7f5; }
+  table.grid input {
+    border: 0; padding: 7px 8px; width: 132px; background: transparent; font-family: var(--font); font-size: .875rem;
+    font-variant-numeric: tabular-nums; outline: none;
+  }
+  table.grid td.tcol input { width: 92px; }
+  table.grid input:focus { background: #eef4fc; box-shadow: inset 0 0 0 2px #2a78d6; }
+  table.grid input.sel { background: #e3edfb; }
+  .gridtools { display: flex; gap: 10px; align-items: center; margin: 12px 0 0; flex-wrap: wrap; }
+  .gridtools .note { margin: 0; }
+
+  /* ---------- messages */
+  .msg { border-radius: var(--radius); padding: 10px 14px; margin: 12px 0; font-size: .925rem; border: 1px solid; }
+  .msg.info { background: var(--info-bg); border-color: var(--info-line); }
+  .msg.err { background: var(--err-bg); border-color: var(--err-line); }
+  details.warn { background: var(--warn-bg); border-color: var(--warn-line); }
+  details.warn > .inner { border-top-color: var(--warn-line); }
+  hr { border: 0; border-top: 1px solid var(--line); margin: 36px 0 8px; }
+
+  /* ---------- results */
+  .meta { font-size: .875rem; color: var(--ink-2); margin: -4px 0 12px; }
+  .dl { display: flex; gap: 12px; flex-wrap: wrap; margin: 6px 0 22px; }
+  .dl .btn { min-width: 230px; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px 28px; margin-bottom: 18px; }
+  .card .k { font-size: .875rem; color: var(--ink-2); }
+  .card .v { font-size: 1.9rem; font-variant-numeric: tabular-nums; line-height: 1.25; margin: 2px 0 6px; }
+  .card .c { font-size: .875rem; color: var(--ink-2); }
+  .call { font-weight: 650; font-size: 1rem; }
+  .call.syn { color: var(--syn); }
+  .call.ant { color: var(--ant); }
+  .call.ns { color: var(--ink); }
+  .charts2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  .chart { width: 100%; min-height: 380px; }
+  .toggle { display: inline-flex; align-items: center; gap: 10px; cursor: pointer; font-size: .9rem; margin: 18px 0 6px; user-select: none; }
+  .toggle input { appearance: none; width: 34px; height: 20px; border-radius: 20px; background: #cfcec8; position: relative; cursor: pointer; transition: background .15s; margin: 0; }
+  .toggle input::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: left .15s; }
+  .toggle input:checked { background: #111; }
+  .toggle input:checked::after { left: 16px; }
+  .tablewrap { border: 1px solid var(--line); border-radius: var(--radius); overflow: auto; max-height: 420px; }
+  table.data { border-collapse: separate; border-spacing: 0; font-size: .85rem; width: max-content; min-width: 100%; }
+  table.data th { position: sticky; top: 0; background: #f7f7f5; text-align: left; font-weight: 500; color: var(--ink-2); padding: 7px 10px; border-bottom: 1px solid var(--line); border-right: 1px solid #eceae4; white-space: nowrap; }
+  table.data td { padding: 6px 10px; border-bottom: 1px solid #eceae4; border-right: 1px solid #eceae4; white-space: nowrap; }
+  table.data td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .more { font-size: .8rem; color: var(--ink-3); padding: 6px 10px; }
+  #results:empty { display: none; }
+
+  @media (max-width: 1000px) {
+    body { flex-direction: column; }
+    aside { width: auto; flex: none; position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+    main { padding: 24px 16px 60px; }
+    .charts2 { grid-template-columns: 1fr; }
+    .loadbar { grid-template-columns: 1fr; }
+    h1 { font-size: 2.1rem; }
+  }
+  @media print { aside, .dl, .gridwrap, .gridtools, .loadbar { display: none; } }
+</style>
+</head>
+<body>
+<aside>
+  <h2>Experiment</h2>
+  <div class="field"><label for="experiment">Experiment name</label><input type="text" id="experiment" placeholder="e.g. PAO1, T7 + cipro, 2026-10-16"></div>
+  <div class="row2">
+    <div class="field"><label for="phageName">Phage</label><input type="text" id="phageName" value="Phage"></div>
+    <div class="field"><label for="antibioticName">Antibiotic</label><input type="text" id="antibioticName" value="Antibiotic"></div>
+  </div>
+  <div class="row2">
+    <div class="field"><label for="nReps">Replicates</label><input type="number" id="nReps" min="1" max="24" value="3"></div>
+    <div class="field"><label for="nConc" title="Number of antibiotic concentrations; each has its own antibiotic-alone and combination columns.">Antibiotic conc.</label><input type="number" id="nConc" min="1" max="12" value="1"></div>
+  </div>
+  <details class="box" id="concBox">
+    <summary>Concentration labels</summary>
+    <div class="inner" id="concLabels"></div>
+  </details>
+
+  <h2>Time</h2>
+  <div class="field">
+    <label for="timeUnit">Time column format</label>
+    <select id="timeUnit"></select>
+    <div class="hint">Auto-detect reads h:mm:ss directly. For plain numbers it guesses hours / minutes / seconds from the largest value; check the line above the results.</div>
+  </div>
+  <label class="check"><input type="checkbox" id="evenSpacing"><span>Assume evenly spaced reads<br><span class="hint">Off = use the real read times (recommended).</span></span></label>
+
+  <h2>Table</h2>
+  <div class="field"><label for="nRows">Rows (time points)</label><input type="number" id="nRows" min="10" max="5000" step="10" value="150"></div>
+  <button class="btn block" id="clearBtn">Clear table</button>
+
+  <h2>Figures</h2>
+  <span class="lbl">Camera-icon download format</span>
+  <div class="seg" id="figFmt">
+    <label><input type="radio" name="figfmt" value="svg" checked><span>svg</span></label>
+    <label><input type="radio" name="figfmt" value="png"><span>png</span></label>
+  </div>
+  <div class="foot" id="versionFoot"></div>
+  <div class="foot">Runs entirely in your browser. No data is uploaded or stored.</div>
+</aside>
+
+<main>
+<div class="wrap">
+  <h1>SPARK</h1>
+  <p class="lede">Phage × antibiotic interaction analysis. Paste growth curves, get SPARK ΔAUC per replicate and across replicates.
+    Negative ΔAUC = less growth than expected (synergy); positive = antagonism.</p>
+
+  <h3 class="step">1 · Data</h3>
+  <details class="box" id="howto" open>
+    <summary>How to fill in the table</summary>
+    <div class="inner">
+      <ul>
+        <li><b>Time</b> in the first column: <code>h:mm:ss</code> as exported by the plate reader, or plain numbers (pick the unit in the sidebar).</li>
+        <li><b>Control rN</b>: untreated growth in replicate N. It normalizes every other column of replicate N.</li>
+        <li><b>Phage rN</b>: phage alone. <b>Antibiotic c rN</b>: antibiotic alone at concentration <i>c</i>. <b>Combo c rN</b>: both together.</li>
+        <li><b>Paste</b>: copy a block in Excel, click the top-left target cell here, press <b>Ctrl+V</b>. Decimal commas are fine.
+          Pasting a block that includes the template header row sets up the columns automatically.</li>
+        <li>Replicates are matched by number. Unused replicate columns can stay empty and are ignored.</li>
+        <li>Or <b>load a file</b> filled in from the blank template (Excel or CSV). To try it out, use the <a href="example_data_SPARK.xlsx" download>example file</a>.</li>
+      </ul>
+    </div>
+  </details>
+
+  <div class="loadbar">
+    <button class="btn block" id="templateBtn">⬇ Blank Excel template</button>
+    <div class="drop" id="drop">
+      <button class="btn" id="chooseBtn">Choose file…</button>
+      <input type="file" id="fileInput" accept=".xlsx,.xlsm,.csv,.txt,.tsv" hidden>
+      <span class="fname" id="fileName">or drop an .xlsx / .csv file here</span>
+      <select id="sheetSel" hidden></select>
+      <button class="btn primary" id="loadBtn" hidden>Load into table</button>
+    </div>
+  </div>
+  <div id="loadNotes"></div>
+
+  <div class="gridwrap" id="gridwrap"><table class="grid" id="grid"></table></div>
+  <div class="gridtools">
+    <button class="btn primary" id="runBtn">▶ Run analysis</button>
+    <span class="note" id="gridNote"></span>
+  </div>
+  <div id="runError"></div>
+
+  <div id="results"></div>
+</div>
+</main>
+
+<script src="lib/plotly.min.js"></script>
+<script src="lib/exceljs.min.js"></script>
+<script src="spark_core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
